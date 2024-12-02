@@ -43,6 +43,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	olmclient "github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
+	discoveryclient "k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 
 	//	olmapi "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -69,6 +70,7 @@ type PatternReconciler struct {
 	dynamicClient   dynamic.Interface
 	routeClient     routeclient.Interface
 	operatorClient  operatorclient.OperatorV1Interface
+	discoveryClient discoveryclient.DiscoveryInterface
 	driftWatcher    driftWatcher
 	gitOperations   GitOperations
 	giteaOperations GiteaOperations
@@ -84,7 +86,7 @@ type PatternReconciler struct {
 //+kubebuilder:rbac:groups=argoproj.io,resources=argocds,verbs=list;get;create;update;patch;delete
 //+kubebuilder:rbac:groups=argoproj.io,resources=applications,verbs=list;get;create;update;patch;delete
 //+kubebuilder:rbac:groups=operators.coreos.com,resources=subscriptions,verbs=list;get;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;create
 //+kubebuilder:rbac:groups="operator.open-cluster-management.io",resources=multiclusterhubs,verbs=get;list
 //+kubebuilder:rbac:groups=operator.openshift.io,resources="openshiftcontrollermanagers",resources=openshiftcontrollermanagers,verbs=get;list
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;update;watch
@@ -425,63 +427,78 @@ func (r *PatternReconciler) postValidation(input *api.Pattern) error { //nolint:
 func (r *PatternReconciler) applyDefaults(input *api.Pattern) (*api.Pattern, error) {
 	output := input.DeepCopy()
 
-	// Cluster ID:
-	// oc get clusterversion -o jsonpath='{.items[].spec.clusterID}{"\n"}'
-	// oc get clusterversion/version -o jsonpath='{.spec.clusterID}'
-	if cv, err := r.configClient.ConfigV1().ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{}); err != nil {
+	if _, apiResourceList, err := r.discoveryClient.ServerGroupsAndResources(); err != nil {
+		//log.Error(err, "Unable to get Group and Resources")
 		return output, err
 	} else {
-		output.Status.ClusterID = string(cv.Spec.ClusterID)
-	}
+		// kind := "clusterversion/version"
+		// name := "clusterversion/version"
+		// Looking for group.Name = "apiextensions.k8s.io"
+		// for i := 0; i < len(apiGroup); i++ {
+		// 	if apiGroup[i].Name == "clusterversion/version" {
+		// 	}
+		// }
 
-	// Cluster platform
-	// oc get Infrastructure.config.openshift.io/cluster  -o jsonpath='{.spec.platformSpec.type}'
-	clusterInfra, err := r.configClient.ConfigV1().Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
-	if err != nil {
-		return output, err
-	} else {
-		//   status:
-		//    apiServerInternalURI: https://api-int.beekhof49.blueprints.rhecoeng.com:6443
-		//    apiServerURL: https://api.beekhof49.blueprints.rhecoeng.com:6443
-		//    controlPlaneTopology: HighlyAvailable
-		//    etcdDiscoveryDomain: ""
-		//    infrastructureName: beekhof49-pqzfb
-		//    infrastructureTopology: HighlyAvailable
-		//    platform: AWS
-		//    platformStatus:
-		//      aws:
-		//        region: ap-southeast-2
-		//      type: AWS
+		for i := 0; i < len(apiResourceList); i++ {
+			if apiResourceList[i].Kind == "clusterversion" {
+				// Cluster ID:
+				// oc get clusterversion -o jsonpath='{.items[].spec.clusterID}{"\n"}'
+				// oc get clusterversion/version -o jsonpath='{.spec.clusterID}'
+				if cv, err := r.configClient.ConfigV1().ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{}); err != nil {
+					return output, err
+				} else {
+					output.Status.ClusterID = string(cv.Spec.ClusterID)
 
-		output.Status.ClusterPlatform = string(clusterInfra.Spec.PlatformSpec.Type)
-	}
+					v, version_err := getCurrentClusterVersion(cv)
+					if version_err != nil {
+						return output, version_err
+					}
+					output.Status.ClusterVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+				}
+			}
+			if apiResourceList[i].Kind == "infrastructure" {
 
-	// Cluster Version
-	// oc get clusterversion/version -o yaml
-	clusterVersions, err := r.configClient.ConfigV1().ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{})
-	if err != nil {
-		return output, err
-	} else {
-		v, version_err := getCurrentClusterVersion(clusterVersions)
-		if version_err != nil {
-			return output, version_err
+				// Cluster platform
+				// oc get Infrastructure.config.openshift.io/cluster  -o jsonpath='{.spec.platformSpec.type}'
+
+				clusterInfra, err := r.configClient.ConfigV1().Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
+				if err != nil {
+					return output, err
+				} else {
+					//   status:
+					//    apiServerInternalURI: https://api-int.beekhof49.blueprints.rhecoeng.com:6443
+					//    apiServerURL: https://api.beekhof49.blueprints.rhecoeng.com:6443
+					//    controlPlaneTopology: HighlyAvailable
+					//    etcdDiscoveryDomain: ""
+					//    infrastructureName: beekhof49-pqzfb
+					//    infrastructureTopology: HighlyAvailable
+					//    platform: AWS
+					//    platformStatus:
+					//      aws:
+					//        region: ap-southeast-2
+					//      type: AWS
+
+					output.Status.ClusterPlatform = string(clusterInfra.Spec.PlatformSpec.Type)
+				}
+			}
+			if apiResourceList[i].Kind == "ingress" {
+				// Derive cluster and domain names
+				// oc get Ingress.config.openshift.io/cluster -o jsonpath='{.spec.domain}'
+				clusterIngress, err := r.configClient.ConfigV1().Ingresses().Get(context.Background(), "cluster", metav1.GetOptions{})
+				if err != nil {
+					return output, err
+				}
+
+				// "apps.mycluster.blueprints.rhecoeng.com"
+				ss := strings.Split(clusterIngress.Spec.Domain, ".")
+
+				output.Status.ClusterName = ss[1]
+				output.Status.AppClusterDomain = clusterIngress.Spec.Domain
+				output.Status.ClusterDomain = strings.Join(ss[1:], ".")
+
+			}
 		}
-		output.Status.ClusterVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 	}
-
-	// Derive cluster and domain names
-	// oc get Ingress.config.openshift.io/cluster -o jsonpath='{.spec.domain}'
-	clusterIngress, err := r.configClient.ConfigV1().Ingresses().Get(context.Background(), "cluster", metav1.GetOptions{})
-	if err != nil {
-		return output, err
-	}
-
-	// "apps.mycluster.blueprints.rhecoeng.com"
-	ss := strings.Split(clusterIngress.Spec.Domain, ".")
-
-	output.Status.ClusterName = ss[1]
-	output.Status.AppClusterDomain = clusterIngress.Spec.Domain
-	output.Status.ClusterDomain = strings.Join(ss[1:], ".")
 
 	if output.Spec.GitOpsConfig == nil {
 		output.Spec.GitOpsConfig = &api.GitOpsConfig{}
@@ -615,6 +632,10 @@ func (r *PatternReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	if r.routeClient, err = routeclient.NewForConfig(r.config); err != nil {
+		return err
+	}
+
+	if r.discoveryClient, err = discoveryclient.NewDiscoveryClientForConfig(r.config); err != nil {
 		return err
 	}
 	r.driftWatcher, _ = newDriftWatcher(r.Client, mgr.GetLogger(), newGitClient())
