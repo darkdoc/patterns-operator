@@ -38,7 +38,6 @@ import (
 	klog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	argoapi "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argoclient "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
@@ -134,9 +133,10 @@ func (r *PatternReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			err = r.Client.Update(context.TODO(), instance)
 			return r.actionPerformed(instance, "updated finalizer", err)
 		}
-	} else if err = r.finalizeObject(instance); err != nil {
-		return r.actionPerformed(instance, "finalize", err)
 	} else {
+		if err = r.finalizeObject(instance); err != nil {
+			return r.actionPerformed(instance, "finalize", err)
+		}
 		log.Printf("Removing finalizer from %s\n", instance.ObjectMeta.Name)
 		controllerutil.RemoveFinalizer(instance, api.PatternFinalizer)
 		if err = r.Client.Update(context.TODO(), instance); err != nil {
@@ -562,17 +562,6 @@ func (r *PatternReconciler) finalizeObject(instance *api.Pattern) error {
 			if err := r.driftWatcher.remove(instance.Name, instance.Namespace); err != nil {
 				return err
 			}
-		}
-		if changed, _ := updateApplication(r.argoClient, targetApp, app, ns); changed {
-			return fmt.Errorf("updated application %q for removal", app.Name)
-		}
-
-		if haveACMHub(r) {
-			return fmt.Errorf("waiting for removal of that acm hub")
-		}
-
-		if app.Status.Sync.Status == argoapi.SyncStatusCodeOutOfSync {
-			return fmt.Errorf("application %q is still %s", app.Name, argoapi.SyncStatusCodeOutOfSync)
 		}
 
 		log.Printf("Removing the application, and cascading to anything instantiated by ArgoCD")
