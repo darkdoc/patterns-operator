@@ -189,7 +189,9 @@ func (r *PatternReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// -- GitOps Subscription
 	targetSub, _ := newSubscriptionFromConfigMap(r.fullClient)
-	_ = controllerutil.SetOwnerReference(qualifiedInstance, targetSub, r.Scheme)
+	//set the pattern cm as owner of gitops sub (with this we tie the gitops sub lifecycle to the vp operator, not to a pattern CR)
+	pattern_cm, _ := r.fullClient.CoreV1().ConfigMaps("openshift-operators").Get(context.TODO(), "patterns-operator-config", metav1.GetOptions{})
+	_ = controllerutil.SetOwnerReference(pattern_cm, targetSub, r.Scheme)
 
 	sub, _ := getSubscription(r.olmClient, targetSub.Name)
 	if sub == nil {
