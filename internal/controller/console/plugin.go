@@ -19,6 +19,7 @@ package console
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -28,6 +29,8 @@ import (
 
 	consolev1 "github.com/openshift/api/console/v1"
 )
+
+const defaultNamespace = "openshift-operators"
 
 const (
 	// PluginName is the name of the plugin and used at several places
@@ -47,16 +50,21 @@ const (
 func CreateOrUpdatePlugin(ctx context.Context, cl client.Client) error {
 	// Create ConsolePlugin resource
 	// Deployment and Service are deployed by OLM
-	// ns, err := controllers.getClusterWideArgoNamespace()
-	// if err != nil {
-	// 	return err
-	// }
-	ns := "openshift-gitops" // FIXME(bandini): need a proper function here
+	ns := getDeploymentNamespace()
 	if err := createOrUpdateConsolePlugin(ctx, ns, cl); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// getDeploymentNamespace returns the namespace where the operator is deployed.
+// It reads from the POD_NAMESPACE env var (set via downward API) or falls back to the default.
+func getDeploymentNamespace() string {
+	if ns, found := os.LookupEnv("POD_NAMESPACE"); found && ns != "" {
+		return ns
+	}
+	return defaultNamespace
 }
 
 func createOrUpdateConsolePlugin(ctx context.Context, namespace string, cl client.Client) error {
@@ -86,7 +94,7 @@ func newConsolePlugin(namespace string) *consolev1.ConsolePlugin {
 			// but which resource to use, needs to be cluster scoped
 		},
 		Spec: consolev1.ConsolePluginSpec{
-			DisplayName: "Fusion Access for SAN plugin",
+			DisplayName: "Validated Patterns Console Plugin",
 			Backend: consolev1.ConsolePluginBackend{
 				Type: consolev1.Service,
 				Service: &consolev1.ConsolePluginService{
