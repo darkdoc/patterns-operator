@@ -95,7 +95,7 @@ export default function PatternCatalogPage() {
                 <CardFooter className="patterns-operator__card-footer">
                   <Button
                     variant="primary"
-                    onClick={() => history.push(`/patterns/install/${pattern.name}`)}
+                    onClick={() => history.push(`/patterns/install/${pattern.catalogKey || pattern.name}`)}
                   >
                     {t('Install')}
                   </Button>
