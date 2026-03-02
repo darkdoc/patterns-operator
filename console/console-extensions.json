@@ -17,6 +17,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/patterns/install/:name",
+      "component": { "$codeRef": "InstallPatternPage" }
+    }
+  },
+  {
     "type": "console.navigation/href",
     "properties": {
       "id": "patterns",
