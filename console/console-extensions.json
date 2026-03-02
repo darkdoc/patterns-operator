@@ -13,7 +13,7 @@
     "properties": {
       "exact": true,
       "path": "/patterns",
-      "component": { "$codeRef": "ExamplePage" }
+      "component": { "$codeRef": "PatternCatalogPage" }
     }
   },
   {

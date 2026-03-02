@@ -19,7 +19,7 @@ import {
 import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import { fetchAllPatterns } from '../api';
 import { Pattern } from '../types';
-import './example.css';
+import './PatternCatalogPage.css';
 
 const TIER_COLORS: Record<string, 'green' | 'blue' | 'grey'> = {
   maintained: 'green',
@@ -55,7 +55,7 @@ export default function PatternCatalogPage() {
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Pattern Catalog')}</title>
+        <title data-test="pattern-catalog-page-title">{t('Pattern Catalog')}</title>
       </Helmet>
       <PageSection>
         <Title headingLevel="h1">{t('Pattern Catalog')}</Title>

@@ -75,7 +75,7 @@
     "displayName": "OpenShift Patterns Operator Console Plugin",
     "description": "OpenShift Patterns Operator Console plugin for Pattern Catalog.",
     "exposedModules": {
-      "ExamplePage": "./components/ExamplePage",
+      "PatternCatalogPage": "./components/PatternCatalogPage",
       "InstallPatternPage": "./components/InstallPatternPage"
     },
     "dependencies": {
