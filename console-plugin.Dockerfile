@@ -10,7 +10,7 @@ RUN yarn install && yarn build
 
 FROM registry.access.redhat.com/ubi9/nginx-120:latest
 LABEL \
-    com.redhat.openshift.versions="v4.12-v4.18" \
+    com.redhat.openshift.versions="v4.20-v4.21" \
     com.redhat.component="Console plugin image for OpenShift Pattern Operator" \
     description="This is the console plugin for the OpenShift Pattern Operator" \
     io.k8s.display-name="Console plugin image for OpenShift Pattern Operator" \
