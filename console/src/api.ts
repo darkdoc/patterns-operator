@@ -1,17 +1,21 @@
-import { consoleFetchText } from '@openshift-console/dynamic-plugin-sdk';
+import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import { load } from 'js-yaml';
 import { Catalog, Pattern } from './types';
 
 const PROXY_BASE = '/api/proxy/plugin/patterns-operator-console-plugin/pattern-catalog';
 
+async function fetchYAML<T>(url: string): Promise<T> {
+  const response = await consoleFetch(url);
+  const text = await response.text();
+  return load(text) as T;
+}
+
 export async function fetchCatalog(): Promise<Catalog> {
-  const text = await consoleFetchText(`${PROXY_BASE}/catalog.yaml`);
-  return load(text) as Catalog;
+  return fetchYAML<Catalog>(`${PROXY_BASE}/catalog.yaml`);
 }
 
 export async function fetchPattern(name: string): Promise<Pattern> {
-  const text = await consoleFetchText(`${PROXY_BASE}/${name}/pattern.yaml`);
-  return load(text) as Pattern;
+  return fetchYAML<Pattern>(`${PROXY_BASE}/${name}/pattern.yaml`);
 }
 
 export async function fetchAllPatterns(): Promise<Pattern[]> {
