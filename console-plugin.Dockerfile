@@ -1,0 +1,35 @@
+FROM registry.access.redhat.com/ubi9/nodejs-22:9.6 AS builder
+
+USER root
+
+WORKDIR /opt/app-root/src
+COPY console/ .
+# replace version in package.json
+RUN sed -r -i "s|\"version\": \"0.0.1\"|\"version\": \"\"|;" ./package.json
+RUN npm ci --ignore-scripts && npm run build
+RUN mkdir licenses
+COPY LICENSE licenses/
+
+FROM registry.access.redhat.com/ubi9/nginx-120:9.6
+LABEL \
+    com.redhat.openshift.versions="" \
+    com.redhat.component="Console plugin image for OpenShift Pattern Operator" \
+    description="This is the console plugin for the OpenShift Pattern Operator" \
+    io.k8s.display-name="Console plugin image for OpenShift Pattern Operator" \
+    io.k8s.description="" \
+    io.openshift.tags="openshift,patterns" \
+    distribution-scope="public" \
+    name="patterns-operator-console-plugin" \
+    summary="Pattern Console Plugin" \
+    release="v" \
+    version="v" \
+    maintainer="abjain39@in.ibm.com" \
+    url="https://github.com/validatedpatterns/patterns-operator.git" \
+    vendor="Red Hat" \
+    License="Apache License 2.0"
+
+COPY --from=builder /opt/app-root/src/licenses/ /licenses/
+COPY --from=builder /opt/app-root/src/docker/etc/default.conf /opt/app-root/etc/nginx.d/
+COPY --from=builder /opt/app-root/src/dist .
+USER 1001
+CMD /usr/libexec/s2i/run
