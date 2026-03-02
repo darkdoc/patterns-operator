@@ -21,7 +21,7 @@ LABEL \
     summary="Pattern Console Plugin" \
     release="v${VERSION}" \
     version="v${VERSION}" \
-    maintainer="abjain39@in.ibm.com" \
+    maintainer="https://groups.google.com/g/validatedpatterns" \
     url="https://github.com/validatedpatterns/patterns-operator.git" \
     vendor="Red Hat" \
     License="Apache License 2.0"
