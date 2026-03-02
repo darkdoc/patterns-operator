@@ -5,4 +5,7 @@ resources:
 - service.yaml
 - deployment.yaml
 - configmap.yaml
-# ConsolePlugin CR is not supported by OLM - created in code at runtime
+images:
+- name: console-plugin
+  newName: kuemper.int.rhx/bandini/patterns-operator-console
+  newTag: 6.6.6
