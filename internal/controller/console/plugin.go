@@ -35,7 +35,7 @@ const defaultNamespace = "openshift-operators"
 const (
 	// PluginName is the name of the plugin and used at several places
 	// this has to be the same as in the package.json in the plugin
-	PluginName = "patterns-operator-console"
+	PluginName = "patterns-operator-console-plugin"
 	// ServiceName is the name of the console plugin Service and must match the name of the Service in /bundle/manifests!
 	ServiceName = "patterns-operator-console-plugin"
 	// ServicePort is the port of the console plugin Service and must match the port of the Service in /bundle/manifests!

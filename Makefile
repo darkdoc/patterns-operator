@@ -4,7 +4,7 @@
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 0.0.4
-SUPPORTED_OCP_VERSIONS ?= v4.12-v4.18
+SUPPORTED_OCP_VERSIONS ?= v4.20-v4.21
 OPERATOR_NAME ?= patterns
 GOFLAGS=-mod=vendor
 REGISTRY ?= localhost
