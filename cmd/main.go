@@ -105,12 +105,17 @@ func main() {
 
 	registerComponentOrExit(mgr, argov1beta1api.AddToScheme)
 
-	// Register and enable the console plugin
-	if err := console.CreateOrUpdatePlugin(context.Background(), mgr.GetClient()); err != nil {
-		setupLog.Error(err, "unable to create/update console plugin")
-	}
-	if err := console.EnablePlugin(context.Background(), mgr.GetClient()); err != nil {
-		setupLog.Error(err, "unable to enable console plugin")
+	// Register and enable the console plugin after the cache is started
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		if err := console.CreateOrUpdatePlugin(ctx, mgr.GetClient()); err != nil {
+			setupLog.Error(err, "unable to create/update console plugin")
+		}
+		if err := console.EnablePlugin(ctx, mgr.GetClient()); err != nil {
+			setupLog.Error(err, "unable to enable console plugin")
+		}
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to add console plugin runnable")
 	}
 
 	analyticsEnabled := areAnalyticsEnabled(mgr.GetAPIReader())
