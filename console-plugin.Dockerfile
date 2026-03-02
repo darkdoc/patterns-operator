@@ -1,16 +1,14 @@
-FROM registry.access.redhat.com/ubi9/nodejs-22:9.6 AS builder
-
+FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS build
 USER root
+RUN command -v yarn || npm i -g yarn
 
-WORKDIR /opt/app-root/src
+WORKDIR /usr/src/app
 COPY console/ .
 # replace version in package.json
 RUN sed -r -i "s|\"version\": \"0.0.1\"|\"version\": \"\"|;" ./package.json
-RUN npm ci --ignore-scripts && npm run build
-RUN mkdir licenses
-COPY LICENSE licenses/
+RUN yarn install && yarn build
 
-FROM registry.access.redhat.com/ubi9/nginx-120:9.6
+FROM registry.access.redhat.com/ubi9/nginx-120:latest
 LABEL \
     com.redhat.openshift.versions="" \
     com.redhat.component="Console plugin image for OpenShift Pattern Operator" \
@@ -28,8 +26,9 @@ LABEL \
     vendor="Red Hat" \
     License="Apache License 2.0"
 
-COPY --from=builder /opt/app-root/src/licenses/ /licenses/
-COPY --from=builder /opt/app-root/src/docker/etc/default.conf /opt/app-root/etc/nginx.d/
-COPY --from=builder /opt/app-root/src/dist .
+COPY --from=build /usr/src/app/dist /usr/share/nginx/html
+RUN mkdir licenses
+COPY LICENSE licenses/
 USER 1001
-CMD /usr/libexec/s2i/run
+
+ENTRYPOINT ["nginx", "-g", "daemon off;"]
