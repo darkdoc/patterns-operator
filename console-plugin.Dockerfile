@@ -1,16 +1,16 @@
-FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS build
+FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS build
 USER root
 RUN command -v yarn || npm i -g yarn
 
 WORKDIR /usr/src/app
 COPY console/ .
 # replace version in package.json
-RUN sed -r -i "s|\"version\": \"0.0.1\"|\"version\": \"\"|;" ./package.json
+RUN sed -r -i "s|\"version\": \"0.0.1\"|\"version\": \"0.0.4\"|;" ./package.json
 RUN yarn install && yarn build
 
 FROM registry.access.redhat.com/ubi9/nginx-120:latest
 LABEL \
-    com.redhat.openshift.versions="" \
+    com.redhat.openshift.versions="v4.12-v4.18" \
     com.redhat.component="Console plugin image for OpenShift Pattern Operator" \
     description="This is the console plugin for the OpenShift Pattern Operator" \
     io.k8s.display-name="Console plugin image for OpenShift Pattern Operator" \
@@ -19,8 +19,8 @@ LABEL \
     distribution-scope="public" \
     name="patterns-operator-console-plugin" \
     summary="Pattern Console Plugin" \
-    release="v" \
-    version="v" \
+    release="v0.0.4" \
+    version="v0.0.4" \
     maintainer="abjain39@in.ibm.com" \
     url="https://github.com/validatedpatterns/patterns-operator.git" \
     vendor="Red Hat" \

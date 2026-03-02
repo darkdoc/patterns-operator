@@ -4,6 +4,7 @@
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 0.0.4
+SUPPORTED_OCP_VERSIONS ?= v4.12-v4.18
 OPERATOR_NAME ?= patterns
 GOFLAGS=-mod=vendor
 REGISTRY ?= localhost
@@ -364,7 +365,7 @@ endif
 # Generate Dockerfile using the template. It uses envsubst to replace the value of the version label in the container
 .PHONY: generate-dockerfile-console-plugin
 generate-dockerfile-console-plugin:
-	envsubst < templates/console-plugin.Dockerfile.template > $(CONSOLE_PLUGIN_DOCKERFILE)
+	VERSION=$(VERSION) SUPPORTED_OCP_VERSIONS=$(SUPPORTED_OCP_VERSIONS) envsubst < templates/console-plugin.Dockerfile.template > $(CONSOLE_PLUGIN_DOCKERFILE)
 
 .PHONY: console-build
 console-build: generate-dockerfile-console-plugin ## Build the console image
