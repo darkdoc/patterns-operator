@@ -76,6 +76,18 @@ rules:
   - get
   - list
 - apiGroups:
+  - console.openshift.io
+  resources:
+  - consoleplugins
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - gitops.hybrid-cloud-patterns.io
   resources:
   - patterns
@@ -108,6 +120,15 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - operator.openshift.io
+  resources:
+  - consoles
+  verbs:
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
   - operator.openshift.io
   resources:

@@ -51,7 +51,7 @@ func CreateOrUpdatePlugin(ctx context.Context, cl client.Client) error {
 	// if err != nil {
 	// 	return err
 	// }
-	ns := "openshift-gitops" // FIXME
+	ns := "openshift-gitops" // FIXME(bandini): need a proper function here
 	if err := createOrUpdateConsolePlugin(ctx, ns, cl); err != nil {
 		return err
 	}
