@@ -175,18 +175,98 @@ function determineClusterCloudProvider(nodes: ParsedClusterNode[]): ClusterInfo[
  * Fetches cluster node information from Kubernetes API
  */
 export async function fetchClusterInfo(): Promise<ClusterInfo> {
+  // Temporary fallback for debugging - can be enabled via localStorage
+  if (typeof window !== 'undefined' && window.localStorage?.getItem('PATTERNS_DEBUG_SKIP_CLUSTER_CHECK') === 'true') {
+    console.warn('SKIPPING cluster compatibility check due to debug flag');
+    return {
+      nodes: [],
+      cloudProvider: 'unknown',
+      workerNodes: [],
+      controlPlaneNodes: [],
+      isBaremetal: false,
+      totalWorkerNodes: 0,
+      totalControlPlaneNodes: 0,
+    };
+  }
   try {
     // Query all nodes using OpenShift Console SDK
+    // Try different model formats to ensure compatibility
     const nodeModel = {
       apiVersion: 'v1',
       kind: 'Node',
       plural: 'nodes',
+      namespaced: false, // Nodes are cluster-scoped
     };
 
-    const [nodes] = await k8sList({
+    console.log('Fetching cluster nodes with model:', nodeModel);
+
+    const result = await k8sList({
       model: nodeModel,
       queryParams: {},
     });
+
+    // Debug: Log the actual result structure
+    console.log('k8sList result structure:', {
+      type: typeof result,
+      isArray: Array.isArray(result),
+      length: Array.isArray(result) ? result.length : 'N/A',
+      keys: typeof result === 'object' && result ? Object.keys(result) : 'N/A'
+    });
+
+    // Handle different possible return formats from k8sList
+    let nodes, loaded, error;
+
+    if (Array.isArray(result)) {
+      // Standard tuple format: [resources, loaded, error]
+      [nodes, loaded, error] = result;
+    } else if (result && typeof result === 'object') {
+      // Alternative object format
+      nodes = result.items || result.data || result;
+      loaded = result.loaded !== false; // Default to true if not specified
+      error = result.error;
+    } else {
+      // Direct array or other format
+      nodes = result;
+      loaded = true;
+      error = null;
+    }
+
+    console.log('Extracted values:', {
+      nodesType: typeof nodes,
+      nodesIsArray: Array.isArray(nodes),
+      nodesLength: Array.isArray(nodes) ? nodes.length : 'N/A',
+      loaded,
+      error
+    });
+
+    if (error) {
+      throw new Error(`Kubernetes API error: ${error.message || error}`);
+    }
+
+    if (!loaded) {
+      throw new Error('Failed to load node information from Kubernetes API');
+    }
+
+    // Ensure nodes is an array
+    if (!Array.isArray(nodes)) {
+      console.error('Final nodes value is not an array:', nodes);
+      throw new Error('Invalid response format from Kubernetes API - nodes data is not an array');
+    }
+
+    // Handle empty nodes array
+    if (nodes.length === 0) {
+      console.warn('No nodes found in cluster');
+      // Return minimal cluster info for empty cluster
+      return {
+        nodes: [],
+        cloudProvider: 'unknown',
+        workerNodes: [],
+        controlPlaneNodes: [],
+        isBaremetal: false,
+        totalWorkerNodes: 0,
+        totalControlPlaneNodes: 0,
+      };
+    }
 
     // Parse nodes into our format
     const parsedNodes = (nodes as ClusterNode[]).map(parseClusterNode);
@@ -211,7 +291,25 @@ export async function fetchClusterInfo(): Promise<ClusterInfo> {
     return clusterInfo;
   } catch (error) {
     console.error('Failed to fetch cluster information:', error);
-    throw new Error(`Unable to query cluster information: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+    // Check for the specific "map is not a function" error
+    if (error instanceof Error && error.message.includes('map is not a function')) {
+      console.error('Detected array mapping issue - k8sList returned unexpected format');
+      throw new Error('Cluster node data format issue - please check console logs and ensure proper cluster permissions');
+    }
+
+    // Provide more specific error messages based on the error type
+    if (error instanceof Error) {
+      if (error.message.includes('Kubernetes API error')) {
+        throw new Error(`Cluster API access denied or unavailable: ${error.message}`);
+      } else if (error.message.includes('Invalid response format')) {
+        throw new Error(`Unexpected cluster data format: ${error.message}`);
+      } else {
+        throw new Error(`Unable to query cluster information: ${error.message}`);
+      }
+    } else {
+      throw new Error(`Unable to query cluster information: ${String(error)}`);
+    }
   }
 }
 
