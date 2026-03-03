@@ -26,21 +26,12 @@ describe('Console plugin template test', () => {
   before(() => {
     cy.login();
     cy.get(`[data-test="tour-step-footer-secondary"]`).contains('Skip tour').click();
+
     if (!isLocalDevEnvironment) {
-      console.log('this is not a local env, installig helm');
-
-      cy.exec('cd ../../console-plugin-template && ./install_helm.sh', {
-        failOnNonZeroExit: false,
-      }).then((result) => {
-        cy.log('Error installing helm binary: ', result.stderr);
-        cy.log('Successfully installed helm binary in "/tmp" directory: ', result.stdout);
-
-        installHelmChart('/tmp/helm');
-      });
+      console.log('Verifying operator-managed console plugin deployment');
+      verifyOperatorDeployment();
     } else {
-      console.log('this is a local env, not installing helm');
-
-      installHelmChart('helm');
+      console.log('Local development environment - assuming plugin is running via yarn start');
     }
   });
 
@@ -49,11 +40,7 @@ describe('Console plugin template test', () => {
   });
 
   after(() => {
-    if (!isLocalDevEnvironment) {
-      deleteHelmChart('/tmp/helm');
-    } else {
-      deleteHelmChart('helm');
-    }
+    // No cleanup needed for operator-managed deployment
     cy.logout();
   });
 
