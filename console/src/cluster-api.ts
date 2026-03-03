@@ -292,21 +292,37 @@ export async function fetchClusterInfo(): Promise<ClusterInfo> {
   } catch (error) {
     console.error('Failed to fetch cluster information:', error);
 
-    // Check for the specific "map is not a function" error
-    if (error instanceof Error && error.message.includes('map is not a function')) {
-      console.error('Detected array mapping issue - k8sList returned unexpected format');
-      throw new Error('Cluster node data format issue - please check console logs and ensure proper cluster permissions');
-    }
-
-    // Provide more specific error messages based on the error type
+    // Check for common permission-related error patterns
     if (error instanceof Error) {
-      if (error.message.includes('Kubernetes API error')) {
-        throw new Error(`Cluster API access denied or unavailable: ${error.message}`);
-      } else if (error.message.includes('Invalid response format')) {
-        throw new Error(`Unexpected cluster data format: ${error.message}`);
-      } else {
-        throw new Error(`Unable to query cluster information: ${error.message}`);
+      const errorMessage = error.message.toLowerCase();
+
+      if (errorMessage.includes('forbidden') || errorMessage.includes('unauthorized')) {
+        throw new Error('Permission denied: Console plugin does not have permission to list cluster nodes. Please ensure RBAC is configured correctly.');
       }
+
+      if (errorMessage.includes('map is not a function')) {
+        console.error('Detected array mapping issue - k8sList returned unexpected format');
+        throw new Error('Cluster node data format issue - please check console logs and ensure proper cluster permissions');
+      }
+
+      if (errorMessage.includes('not found') && errorMessage.includes('node')) {
+        throw new Error('Node resource not found - ensure the cluster has worker nodes and the API is accessible');
+      }
+
+      if (errorMessage.includes('kubernetes api error')) {
+        throw new Error(`Cluster API access denied or unavailable: ${error.message}`);
+      }
+
+      if (errorMessage.includes('invalid response format')) {
+        throw new Error(`Unexpected cluster data format: ${error.message}`);
+      }
+
+      if (errorMessage.includes('failed to load')) {
+        throw new Error('Failed to load cluster node information - check console plugin RBAC permissions');
+      }
+
+      // Generic error with context
+      throw new Error(`Unable to query cluster information: ${error.message}`);
     } else {
       throw new Error(`Unable to query cluster information: ${String(error)}`);
     }

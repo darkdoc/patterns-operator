@@ -99,6 +99,8 @@ type PatternReconciler struct {
 //+kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=list;get
 //+kubebuilder:rbac:groups=config.openshift.io,resources=ingresses,verbs=list;get
 //+kubebuilder:rbac:groups=config.openshift.io,resources=infrastructures,verbs=list;get
+//+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list
+//+kubebuilder:rbac:groups=machine.openshift.io,resources=machines,verbs=get;list
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=list;watch;delete;update;get;create;patch
 //+kubebuilder:rbac:groups=argoproj.io,resources=argocds,verbs=list;watch;get;create;update;patch;delete
 //+kubebuilder:rbac:groups=argoproj.io,resources=applications,verbs=list;get;create;update;patch;delete
