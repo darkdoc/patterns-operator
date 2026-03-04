@@ -145,7 +145,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
             },
           },
           spec: {
-            serviceAccountName: 'patterns-secret-injector',
+            serviceAccountName: 'patterns-operator-secret-injector',
             restartPolicy: 'Never',
             containers: [
               {
