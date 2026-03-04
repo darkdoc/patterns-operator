@@ -75,7 +75,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
         namespace: 'openshift-operators',
         labels: {
           'patterns.gitops.hybrid-cloud-patterns.io/pattern': request.patternName,
-          'patterns.gitops.hybrid-cloud-patterns.io/component': 'vault-injector',
+          'patterns.gitops.hybrid-cloud-patterns.io/component': 'secret-injector',
         },
       },
       type: 'Opaque',
@@ -98,7 +98,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
         namespace: 'openshift-operators',
         labels: {
           'patterns.gitops.hybrid-cloud-patterns.io/pattern': request.patternName,
-          'patterns.gitops.hybrid-cloud-patterns.io/component': 'vault-injector',
+          'patterns.gitops.hybrid-cloud-patterns.io/component': 'secret-injector',
         },
       },
       spec: {
@@ -107,15 +107,15 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
           metadata: {
             labels: {
               'patterns.gitops.hybrid-cloud-patterns.io/pattern': request.patternName,
-              'patterns.gitops.hybrid-cloud-patterns.io/component': 'vault-injector',
+              'patterns.gitops.hybrid-cloud-patterns.io/component': 'secret-injector',
             },
           },
           spec: {
-            serviceAccountName: 'vault-injector',
+            serviceAccountName: 'patterns-operator-patterns-secret-injector',
             restartPolicy: 'Never',
             containers: [
               {
-                name: 'vault-injector',
+                name: 'secret-injector',
                 image: 'quay.io/validatedpatterns/imperative-container:v1',
                 command: [
                   '/bin/bash',
@@ -202,7 +202,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
 export async function fetchVaultJobStatus(patternName: string): Promise<VaultJobStatus> {
   try {
-    const url = `/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs?labelSelector=patterns.gitops.hybrid-cloud-patterns.io/pattern=${patternName},patterns.gitops.hybrid-cloud-patterns.io/component=vault-injector`;
+    const url = `/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs?labelSelector=patterns.gitops.hybrid-cloud-patterns.io/pattern=${patternName},patterns.gitops.hybrid-cloud-patterns.io/component=secret-injector`;
     const response = await consoleFetch(url);
     const data = await response.json();
 
