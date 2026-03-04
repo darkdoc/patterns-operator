@@ -176,19 +176,23 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
   gather_facts: false
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    values_secrets: "{{ pattern_dir }}/values-secret.yaml"
+    check_missing_secrets: false
+    namespace: "{{ vault_ns }}"
+    pod: "{{ vault_pod }}"
   tasks:
     - name: Check if values-secret.yaml.template exists
       ansible.builtin.stat:
         path: "{{ pattern_dir }}/values-secret.yaml.template"
       register: template_file_check
 
-    - name: Load secrets into vault using rhvp.cluster_utils module
-      rhvp.cluster_utils.vault_load_secrets:
-        values_secrets: "{{ pattern_dir }}/values-secret.yaml"
+    - name: Set values-secret.yaml.template exists fact
+      ansible.builtin.set_fact:
         values_secret_template: "{{ (template_file_check.stat.exists) | ternary(pattern_dir + '/values-secret.yaml.template', omit) }}"
-        check_missing_secrets: false
-        namespace: "{{ vault_ns }}"
-        pod: "{{ vault_pod }}"
+
+    - name: Load secrets into vault using rhvp.cluster_utils module
+      ansible.builtin.include_role:
+        rhvp.cluster_utils.vault_load_secrets
 PLAYBOOK_EOF
 
                   # Run the playbook with our variables
