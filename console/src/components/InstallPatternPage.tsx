@@ -384,7 +384,7 @@ export default function InstallPatternPage() {
           </Alert>
         )}
         {/* Vault injection status */}
-        {success && secretData && secretTemplate && vaultJobStatus && (
+        {success && secretFormData && Object.keys(secretFormData).length > 0 && secretTemplate && vaultJobStatus && (
           <Alert
             variant={
               vaultJobStatus.status === 'succeeded'
