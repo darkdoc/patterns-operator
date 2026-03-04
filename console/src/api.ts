@@ -167,9 +167,23 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
                   echo "Secret files prepared, running ansible to inject into vault..."
 
-                  # Run the same ansible role that CLI uses
+                  # Create a simple playbook that includes the vault_utils tasks
+                  cat > /tmp/vault_injection_playbook.yaml << 'PLAYBOOK_EOF'
+---
+- name: Inject secrets into Vault
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tasks:
+    - name: Include vault_utils push_secrets tasks
+      ansible.builtin.include_tasks: /usr/share/ansible/collections/ansible_collections/rhvp/cluster_utils/roles/vault_utils/tasks/push_secrets.yaml
+PLAYBOOK_EOF
+
+                  # Run the playbook with our variables
                   cd /pattern-home
-                  ansible-playbook -v -i localhost, /usr/share/ansible/collections/ansible_collections/rhvp/cluster_utils/roles/vault_utils/tasks/push_secrets.yaml \\
+                  ansible-playbook -v -i localhost, /tmp/vault_injection_playbook.yaml \\
                     -e pattern_name="${request.patternName}" \\
                     -e pattern_dir="/tmp/pattern" \\
                     -e vault_ns="${request.vaultNamespace || 'vault'}" \\
