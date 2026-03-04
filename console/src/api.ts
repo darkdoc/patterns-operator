@@ -167,7 +167,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
                   echo "Secret files prepared, running ansible to inject into vault..."
 
-                  # Create a simple playbook that includes the vault_utils tasks
+                  # Create a simplified playbook that calls the vault_load_secrets module directly
                   cat > /tmp/vault_injection_playbook.yaml << 'PLAYBOOK_EOF'
 ---
 - name: Inject secrets into Vault
@@ -177,8 +177,18 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
   tasks:
-    - name: Include vault_utils push_secrets tasks
-      ansible.builtin.include_tasks: /usr/share/ansible/collections/ansible_collections/rhvp/cluster_utils/roles/vault_utils/tasks/push_secrets.yaml
+    - name: Check if values-secret.yaml.template exists
+      ansible.builtin.stat:
+        path: "{{ pattern_dir }}/values-secret.yaml.template"
+      register: template_file_check
+
+    - name: Load secrets into vault using rhvp.cluster_utils module
+      rhvp.cluster_utils.vault_load_secrets:
+        values_secrets: "{{ pattern_dir }}/values-secret.yaml"
+        values_secret_template: "{{ (template_file_check.stat.exists) | ternary(pattern_dir + '/values-secret.yaml.template', omit) }}"
+        check_missing_secrets: false
+        namespace: "{{ vault_ns }}"
+        pod: "{{ vault_pod }}"
 PLAYBOOK_EOF
 
                   # Run the playbook with our variables
