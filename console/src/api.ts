@@ -54,13 +54,22 @@ export interface VaultInjectionResponse {
 
 export async function triggerVaultInjection(request: VaultInjectionRequest): Promise<VaultInjectionResponse> {
   try {
-    console.log('Starting vault injection for pattern:', request.patternName);
+    console.log('🚀 [API] Starting vault injection for pattern:', request.patternName);
+    console.log('📊 [API] Request details:', {
+      patternName: request.patternName,
+      valuesSecretYamlLength: request.valuesSecretYaml?.length || 0,
+      hasTemplate: !!request.templateYaml,
+      vaultNamespace: request.vaultNamespace || 'vault',
+      vaultPod: request.vaultPod || 'vault-0',
+      vaultHub: request.vaultHub || 'hub'
+    });
+
     const timestamp = Date.now();
     const secretName = `vault-secrets-${request.patternName}-${timestamp}`;
     const jobName = `vault-inject-${request.patternName}-${timestamp}`;
 
-    console.log('Creating secret:', secretName);
-    console.log('Creating job:', jobName);
+    console.log('🔐 [API] Creating Kubernetes secret:', secretName);
+    console.log('⚙️ [API] Creating Kubernetes job:', jobName);
 
     // First, create a Secret with the values-secret.yaml content
     const secretData: any = {
@@ -87,7 +96,13 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
     };
 
     // Create the secret
-    console.log('Creating secret with payload:', JSON.stringify(secret, null, 2));
+    console.log('🔐 [API] Creating secret with payload size:', JSON.stringify(secret).length, 'bytes');
+    console.log('🔐 [API] Secret metadata:', {
+      name: secret.metadata.name,
+      namespace: secret.metadata.namespace,
+      labels: secret.metadata.labels
+    });
+
     const secretResponse = await consoleFetch('/api/kubernetes/api/v1/namespaces/openshift-operators/secrets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,9 +111,17 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
     if (!secretResponse.ok) {
       const errorText = await secretResponse.text();
+      console.error('🔴 [API] Failed to create secret:', secretResponse.status, errorText);
       throw new Error(`Failed to create secret: ${secretResponse.status} ${errorText}`);
     }
-    console.log('Secret created successfully:', secretName);
+
+    const secretResult = await secretResponse.json();
+    console.log('✅ [API] Secret created successfully:', secretName);
+    console.log('✅ [API] Secret creation result:', {
+      name: secretResult.metadata?.name,
+      uid: secretResult.metadata?.uid,
+      creationTimestamp: secretResult.metadata?.creationTimestamp
+    });
 
     // Now create a Job that uses this secret
     const job = {
@@ -190,7 +213,15 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
     };
 
     // Create the job
-    console.log('Creating job with payload:', JSON.stringify(job, null, 2));
+    console.log('⚙️ [API] Creating job with payload size:', JSON.stringify(job).length, 'bytes');
+    console.log('⚙️ [API] Job metadata:', {
+      name: job.metadata.name,
+      namespace: job.metadata.namespace,
+      labels: job.metadata.labels,
+      serviceAccountName: job.spec.template.spec.serviceAccountName,
+      containerImage: job.spec.template.spec.containers[0].image
+    });
+
     const jobResponse = await consoleFetch('/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -199,13 +230,20 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
     if (!jobResponse.ok) {
       const errorText = await jobResponse.text();
-      console.error('Failed to create job:', jobResponse.status, errorText);
+      console.error('🔴 [API] Failed to create job:', jobResponse.status, errorText);
       throw new Error(`Failed to create job: ${jobResponse.status} ${errorText}`);
     }
 
     const jobData = await jobResponse.json();
-    console.log('Job created successfully:', jobData.metadata?.name);
+    console.log('✅ [API] Job created successfully:', jobData.metadata?.name);
+    console.log('✅ [API] Job creation result:', {
+      name: jobData.metadata?.name,
+      uid: jobData.metadata?.uid,
+      creationTimestamp: jobData.metadata?.creationTimestamp,
+      backoffLimit: jobData.spec?.backoffLimit
+    });
 
+    console.log('🎉 [API] Vault injection setup completed successfully');
     return {
       success: true,
       message: 'Vault injection job created successfully',
@@ -213,7 +251,12 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
       secretName,
     };
   } catch (error) {
-    console.error('Error triggering vault injection:', error);
+    console.error('🔴 [API] Error triggering vault injection:', error);
+    console.error('🔴 [API] Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     return {
       success: false,
       message: `Error triggering vault injection: ${error.message || error}`,
@@ -224,10 +267,27 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 export async function fetchVaultJobStatus(patternName: string): Promise<VaultJobStatus> {
   try {
     const url = `/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs?labelSelector=patterns.gitops.hybrid-cloud-patterns.io/pattern=${patternName},patterns.gitops.hybrid-cloud-patterns.io/component=secret-injector`;
+    console.log(`🔍 [API] Fetching vault job status for pattern: ${patternName}`);
+    console.log(`🔍 [API] Request URL: ${url}`);
+
     const response = await consoleFetch(url);
+    if (!response.ok) {
+      console.error(`🔴 [API] Failed to fetch vault job status: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch vault job status: ${response.status}`);
+    }
+
     const data = await response.json();
+    console.log(`📋 [API] Jobs response received:`, {
+      itemCount: data.items?.length || 0,
+      items: data.items?.map(job => ({
+        name: job.metadata?.name,
+        creationTimestamp: job.metadata?.creationTimestamp,
+        status: job.status
+      })) || []
+    });
 
     if (!data.items || data.items.length === 0) {
+      console.log(`🟡 [API] No vault injection jobs found for pattern: ${patternName}`);
       return {
         status: 'not-found',
         message: 'No vault injection job found for this pattern',
@@ -238,28 +298,48 @@ export async function fetchVaultJobStatus(patternName: string): Promise<VaultJob
     const job = data.items[data.items.length - 1];
     const jobStatus = job.status || {};
 
+    console.log(`📊 [API] Processing job status for: ${job.metadata?.name}`, {
+      jobName: job.metadata?.name,
+      creationTimestamp: job.metadata?.creationTimestamp,
+      status: jobStatus,
+      conditions: jobStatus.conditions?.map(c => ({ type: c.type, status: c.status, reason: c.reason })) || []
+    });
+
     let status: VaultJobStatus['status'] = 'pending';
     let message = 'Vault secrets injection is pending';
 
     if (jobStatus.succeeded && jobStatus.succeeded > 0) {
       status = 'succeeded';
       message = 'Vault secrets injection completed successfully';
+      console.log(`✅ [API] Job succeeded: ${job.metadata?.name}`);
     } else if (jobStatus.failed && jobStatus.failed > 0) {
       status = 'failed';
       message = 'Vault secrets injection failed';
+      console.log(`❌ [API] Job failed: ${job.metadata?.name}`);
     } else if (jobStatus.active && jobStatus.active > 0) {
       status = 'running';
       message = 'Vault secrets injection is in progress';
+      console.log(`⏳ [API] Job running: ${job.metadata?.name}`);
+    } else {
+      console.log(`⏸️ [API] Job pending: ${job.metadata?.name}`);
     }
 
-    return {
+    const result = {
       jobName: job.metadata.name,
       status,
       message,
       conditions: jobStatus.conditions || [],
     };
+
+    console.log(`📋 [API] Final job status result:`, result);
+    return result;
   } catch (error) {
-    console.error('Error fetching vault job status:', error);
+    console.error(`🔴 [API] Error fetching vault job status for pattern ${patternName}:`, error);
+    console.error(`🔴 [API] Error details:`, {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     return {
       status: 'not-found',
       message: `Error checking vault job status: ${error.message || error}`,
