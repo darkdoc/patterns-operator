@@ -87,13 +87,23 @@ export default function InstallPatternPage() {
   }, [name, locationState]);
 
   const triggerVaultInjection = React.useCallback(async () => {
-    if (!patternName || !secretData || !secretTemplate) return;
+    if (!patternName || !secretData || !secretTemplate) {
+      console.log('Missing required data for vault injection:', {
+        patternName: !!patternName,
+        secretData: !!secretData,
+        secretTemplate: !!secretTemplate,
+      });
+      return;
+    }
 
     try {
       // Convert secretData to YAML format
       const yaml = await import('js-yaml');
+      console.log('Converting secretData to YAML:', secretData);
       const valuesSecretYaml = yaml.dump(secretData);
       const templateYaml = JSON.stringify(secretTemplate, null, 2);
+      console.log('Generated values YAML:', valuesSecretYaml);
+      console.log('Generated template YAML:', templateYaml);
 
       const request: VaultInjectionRequest = {
         patternName,
@@ -101,7 +111,9 @@ export default function InstallPatternPage() {
         templateYaml,
       };
 
+      console.log('Triggering vault injection with request:', request);
       const result = await apiTriggerVaultInjection(request);
+      console.log('Vault injection result:', result);
 
       if (result.success) {
         // Start polling for job status
@@ -109,6 +121,7 @@ export default function InstallPatternPage() {
           checkVaultJobStatus();
         }, 2000);
       } else {
+        console.error('Vault injection failed:', result.message);
         setVaultJobStatus({
           status: 'not-found',
           message: result.message,
@@ -116,9 +129,10 @@ export default function InstallPatternPage() {
       }
     } catch (err) {
       console.error('Error triggering vault injection:', err);
+      const errorMessage = err.message || err.toString();
       setVaultJobStatus({
         status: 'not-found',
-        message: `Failed to trigger vault injection: ${err.message || err}`,
+        message: `Failed to trigger vault injection: ${errorMessage}`,
       });
     }
   }, [patternName, secretData, secretTemplate]);

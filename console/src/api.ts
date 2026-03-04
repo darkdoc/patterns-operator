@@ -54,9 +54,13 @@ export interface VaultInjectionResponse {
 
 export async function triggerVaultInjection(request: VaultInjectionRequest): Promise<VaultInjectionResponse> {
   try {
+    console.log('Starting vault injection for pattern:', request.patternName);
     const timestamp = Date.now();
     const secretName = `vault-secrets-${request.patternName}-${timestamp}`;
     const jobName = `vault-inject-${request.patternName}-${timestamp}`;
+
+    console.log('Creating secret:', secretName);
+    console.log('Creating job:', jobName);
 
     // First, create a Secret with the values-secret.yaml content
     const secretData: any = {
@@ -83,11 +87,18 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
     };
 
     // Create the secret
-    await consoleFetch('/api/kubernetes/api/v1/namespaces/openshift-operators/secrets', {
+    console.log('Creating secret with payload:', JSON.stringify(secret, null, 2));
+    const secretResponse = await consoleFetch('/api/kubernetes/api/v1/namespaces/openshift-operators/secrets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(secret),
     });
+
+    if (!secretResponse.ok) {
+      const errorText = await secretResponse.text();
+      throw new Error(`Failed to create secret: ${secretResponse.status} ${errorText}`);
+    }
+    console.log('Secret created successfully:', secretName);
 
     // Now create a Job that uses this secret
     const job = {
@@ -179,11 +190,21 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
     };
 
     // Create the job
-    await consoleFetch('/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs', {
+    console.log('Creating job with payload:', JSON.stringify(job, null, 2));
+    const jobResponse = await consoleFetch('/api/kubernetes/apis/batch/v1/namespaces/openshift-operators/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(job),
     });
+
+    if (!jobResponse.ok) {
+      const errorText = await jobResponse.text();
+      console.error('Failed to create job:', jobResponse.status, errorText);
+      throw new Error(`Failed to create job: ${jobResponse.status} ${errorText}`);
+    }
+
+    const jobData = await jobResponse.json();
+    console.log('Job created successfully:', jobData.metadata?.name);
 
     return {
       success: true,
