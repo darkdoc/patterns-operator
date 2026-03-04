@@ -139,12 +139,18 @@ export default function InstallPatternPage() {
     });
 
     try {
-      // Convert secretFormData to YAML format
+      // Convert secretFormData to YAML format with proper structure for vault_load_secrets
       const yaml = await import('js-yaml');
       console.log('🔄 [InstallPatternPage] Converting secretFormData to YAML:', secretFormData);
-      const valuesSecretYaml = yaml.dump(secretFormData);
+
+      // Wrap the secret data in the structure expected by vault_load_secrets module
+      const vaultSecretStructure = {
+        secrets: secretFormData
+      };
+
+      const valuesSecretYaml = yaml.dump(vaultSecretStructure);
       const templateYaml = JSON.stringify(secretTemplate, null, 2);
-      console.log('✅ [InstallPatternPage] Generated values YAML:', valuesSecretYaml);
+      console.log('✅ [InstallPatternPage] Generated values YAML with vault structure:', valuesSecretYaml);
       console.log('✅ [InstallPatternPage] Generated template YAML:', templateYaml);
 
       const request: VaultInjectionRequest = {
