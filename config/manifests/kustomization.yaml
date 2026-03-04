@@ -8,10 +8,23 @@ resources:
 - ../console-plugin
 - ../pattern-catalog
 
+# Patch the patterns-secret-injector ClusterRoleBinding to use openshift-operators namespace
+# since OLM deploys AllNamespace operators there regardless of kustomization default
+# patchesJson6902:
+# - target:
+#     group: rbac.authorization.k8s.io
+#     version: v1
+#     kind: ClusterRoleBinding
+#     name: patterns-operator-patterns-secret-injector-rolebinding
+#   patch: |-
+#     - op: replace
+#       path: /subjects/0/namespace
+#       value: openshift-operators
+
 # [WEBHOOK] To enable webhooks, uncomment all the sections with [WEBHOOK] prefix.
 # Do NOT uncomment sections with prefix [CERTMANAGER], as OLM does not support cert-manager.
 # These patches remove the unnecessary "cert" volume and its manager container volumeMount.
-#patchesJson6902:
+#- target:
 #- target:
 #    group: apps
 #    version: v1
