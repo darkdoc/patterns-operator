@@ -192,7 +192,7 @@ export async function triggerVaultInjection(request: VaultInjectionRequest): Pro
 
     - name: Load secrets into vault using rhvp.cluster_utils module
       ansible.builtin.include_role:
-        name: rhvp.cluster_utils.vault_load_secrets
+        name: rhvp.cluster_utils.load_secrets
 PLAYBOOK_EOF
 
                   # Run the playbook with our variables
