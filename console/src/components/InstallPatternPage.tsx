@@ -154,9 +154,11 @@ export default function InstallPatternPage() {
           if (fieldDef.vaultPolicy) field.vaultPolicy = fieldDef.vaultPolicy;
           if (fieldDef.base64) field.base64 = fieldDef.base64;
           if (fieldDef.override) field.override = fieldDef.override;
-          const val = formValues[fieldDef.name];
-          if (typeof val === 'string' && val !== '') {
-            field.value = val;
+          if (fieldDef.onMissingValue !== 'generate') {
+            const val = formValues[fieldDef.name];
+            if (typeof val === 'string' && val !== '') {
+              field.value = val;
+            }
           }
           return field;
         });
