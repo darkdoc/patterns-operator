@@ -144,6 +144,7 @@ export default function InstallPatternPage() {
 
       // Wrap the secret data in the structure expected by vault_load_secrets module
       const vaultSecretStructure = {
+        version: '2.0',
         secrets: secretFormData
       };
 
