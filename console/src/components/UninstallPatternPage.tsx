@@ -80,7 +80,15 @@ export default function UninstallPatternPage() {
     setError(null);
     try {
       await deletePattern(name);
-      setConfirmed(true);
+      // Check immediately if the CR is already gone
+      const s = await fetchPatternCR(name);
+      if (!s.exists) {
+        setDeleted(true);
+        setDeleting(false);
+      } else {
+        setStatus(s);
+        setConfirmed(true);
+      }
     } catch (err) {
       setError(err?.message || String(err));
       setDeleting(false);
