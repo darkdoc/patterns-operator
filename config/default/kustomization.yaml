@@ -24,20 +24,6 @@ bases:
 # [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
 #- ../prometheus
 
-# These two are needed because otherwise kustomize will prefix the namespace with `patterns-operator` by default
-patchesJson6902:
-- target:
-    group: rbac.authorization.k8s.io
-    version: v1
-    kind: ClusterRoleBinding
-    name: secret-injector-rolebinding
-  path: secret_injector_namespace_patch.yaml
-- target:
-    version: v1
-    kind: ServiceAccount
-    name: secret-injector
-  path: secret_injector_sa_namespace_patch.yaml
-
 patchesStrategicMerge:
 # Protect the /metrics endpoint by putting it behind auth.
 # If you want your controller-manager to expose the /metrics
