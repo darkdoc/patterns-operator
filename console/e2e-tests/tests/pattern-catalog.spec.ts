@@ -101,11 +101,13 @@ test.describe('Pattern Catalog Page', () => {
     }
   });
 
-  test('shows error alert when catalog fails to load', async ({ page }) => {
-    await gotoCatalogPage(page);
-    // This test verifies the page doesn't crash — it either shows cards or an error
-    const hasCards = await page.locator(selectors.patternCard).count() > 0;
-    const hasError = await page.locator(selectors.alertDanger).count() > 0;
-    expect(hasCards || hasError).toBe(true);
+  test('page renders without crashing', async ({ page }) => {
+    const loaded = await gotoCatalogPage(page);
+    // The page should show either pattern cards or an error alert — never a blank page
+    if (loaded) {
+      await expect(page.locator(selectors.patternCard).first()).toBeVisible();
+    } else {
+      await expect(page.locator(selectors.alertDanger)).toBeVisible();
+    }
   });
 });

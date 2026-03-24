@@ -1,7 +1,7 @@
 export const selectors = {
   // PatternCatalogPage
   catalogPageTitle: 'h1:has-text("Pattern Catalog")',
-  tierFilterToggle: '#tier-filter button',
+  tierFilterToggle: '#content-scrollable .pf-v6-c-menu-toggle',
   patternCard: '.patterns-operator__card',
   installedLabel: '.patterns-operator__installed-label',
   installButton: 'button:has-text("Install")',
@@ -22,5 +22,5 @@ export const selectors = {
   cancelButton: 'button:has-text("Cancel")',
 
   // Tier filter options
-  tierOption: (tier: string) => `[role="option"]:has-text("${tier}")`,
+  tierOption: (tier: string) => `.pf-v6-c-menu__list-item:has-text("${tier}")`,
 };
