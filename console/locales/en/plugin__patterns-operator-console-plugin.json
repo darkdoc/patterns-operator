@@ -86,6 +86,7 @@
   "This pattern does not have a secret template defined.": "This pattern does not have a secret template defined.",
   "This value will be automatically generated using vault policies": "This value will be automatically generated using vault policies",
   "This will delete the pattern and all its deployed resources.": "This will delete the pattern and all its deployed resources.",
+  "Tier": "Tier",
   "Uninstall": "Uninstall",
   "Uninstall Pattern": "Uninstall Pattern",
   "Upload a file that will be base64 encoded": "Upload a file that will be base64 encoded",
