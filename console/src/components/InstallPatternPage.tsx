@@ -620,7 +620,7 @@ export default function InstallPatternPage() {
                 label={t('I want to use my own fork')}
                 isChecked={useOwnFork}
                 onChange={(_event, checked) => setUseOwnFork(checked)}
-                style={{ marginTop: '8px' }}
+                style={{ marginTop: '8px', display: 'flex', alignItems: 'center' }}
               />
             </FormGroup>
             <FormGroup label={t('Target Revision')} isRequired fieldId="pattern-target-revision">
