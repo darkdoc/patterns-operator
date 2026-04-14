@@ -14,7 +14,7 @@ permissions:
 env:
   REGISTRY: localhost
   NAME: patterns-operator
-  CONSOLE_NAME: patterns-operator-operator-console
+  CONSOLE_NAME: patterns-operator-console
   TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.ref_name == 'main' && 'latest' || github.ref_name) }}
 
 jobs:
@@ -209,9 +209,10 @@ jobs:
       - name: Sign the published Docker image
         env:
           DIGEST: ${{ steps.manifest-push.outputs.digest }}
-          CONSOLE_DIGEST: ${{ steps.manifest-push.outputs.console_digest }}\
+          CONSOLE_DIGEST: ${{ steps.manifest-push.outputs.console_digest }}
           UPLOADREGISTRY: ${{ matrix.upload_registry }}
           OPERATOR_IMG: ${{ env.NAME }}:${{ env.TAG }}
+          CONSOLE_PLUGIN_IMAGE: ${{ env.CONSOLE_NAME }}:${{ env.TAG }}
         run: |
           cat "${XDG_RUNTIME_DIR}/containers/auth.json" > ~/.docker/config.json
           cosign sign --yes "${UPLOADREGISTRY}/${OPERATOR_IMG}@${DIGEST}"
