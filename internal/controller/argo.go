@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -213,7 +214,7 @@ if obj.status ~= nil then
       -- Last possiblity of .status.state: AtLatestKnown
       msg =  msg .. ".status.state is '" .. obj.status.state .. "'\n"
     end
- 
+
     if numDegraded == 0 and numPending == 0 then
       health_status.status = "Healthy"
       health_status.message = msg
@@ -861,9 +862,9 @@ func newApplicationValueFiles(p *api.Pattern, prefix string, useVariantsDir bool
 			fmt.Sprintf("%s/values-%s.yaml", prefix, p.Status.ClusterName),
 		}
 	}
-
+	// TODO HERE
 	for _, extra := range p.Spec.ExtraValueFiles {
-		extraValueFile := fmt.Sprintf("%s/%s", prefix, strings.TrimPrefix(extra, "/"))
+		extraValueFile := prependDollarIfMatches(extra, p.Spec.GitConfig.SubPatterns, prefix)
 		log.Printf("Values file %q added", extraValueFile)
 		files = append(files, extraValueFile)
 	}
@@ -877,6 +878,30 @@ func newApplicationValues(p *api.Pattern) string {
 		s += line
 	}
 	return s
+}
+
+func prependDollarIfMatches(input string, subPatterns []api.SubPattern, defaultPrefix string) string {
+	// Check if any SubPattern.Name is a prefix of the input string
+	// Clean the path to handle duplicate slashes or relative segments,
+	// then strip the leading slash if it exists
+	cleanedPath := strings.TrimPrefix(filepath.Clean(input), "/")
+
+	// Split by "/" to extract just the first directory/segment name
+	pathSegments := strings.Split(cleanedPath, "/")
+	firstSegment := ""
+	if len(pathSegments) > 0 {
+		firstSegment = pathSegments[0]
+	}
+
+	// Check if the exact first segment matches any SubPattern.Name
+	match := slices.ContainsFunc(subPatterns, func(sp api.SubPattern) bool {
+		return sp.Name != "" && firstSegment == sp.Name
+	})
+
+	if match {
+		return "$" + strings.TrimPrefix(input, "/")
+	}
+	return "$" + defaultPrefix
 }
 
 // Fetches the clusterGroup.sharedValueFiles values from a checked out git repo
@@ -925,11 +950,8 @@ func getSharedValueFiles(p *api.Pattern, prefix string) ([]string, error) {
 			log.Printf("Failed to render templated string %s: %v", str, err)
 			continue
 		}
-		if strings.HasPrefix(templatedString, "/") {
-			stringSlice[i] = fmt.Sprintf("%s%s", prefix, templatedString)
-		} else {
-			stringSlice[i] = fmt.Sprintf("%s/%s", prefix, templatedString)
-		}
+		// TODO HERE
+		stringSlice[i] = prependDollarIfMatches(templatedString, p.Spec.GitConfig.SubPatterns, prefix)
 	}
 
 	return stringSlice, nil
@@ -1083,14 +1105,14 @@ func newMultiSourceApplication(p *api.Pattern) *argoapi.Application {
 			RepoURL:        p.Spec.MultiSourceConfig.HelmRepoUrl,
 			Chart:          "clustergroup",
 			TargetRevision: getClusterGroupChartVersion(p),
-			Helm:           commonApplicationSourceHelm(p, "$patternref"),
+			Helm:           commonApplicationSourceHelm(p, "$"+PatternRef),
 		}
 	} else {
 		baseSource = &argoapi.ApplicationSource{
 			RepoURL:        p.Spec.MultiSourceConfig.ClusterGroupGitRepoUrl,
 			Path:           ".",
 			TargetRevision: p.Spec.MultiSourceConfig.ClusterGroupChartGitRevision,
-			Helm:           commonApplicationSourceHelm(p, "$patternref"),
+			Helm:           commonApplicationSourceHelm(p, "$"+PatternRef),
 		}
 	}
 	sources = append(sources, *baseSource)
@@ -1098,7 +1120,7 @@ func newMultiSourceApplication(p *api.Pattern) *argoapi.Application {
 	if p.Spec.GitConfig.SubPatterns != nil {
 		for _, subPattern := range p.Spec.GitConfig.SubPatterns {
 			subPatternSource := &argoapi.ApplicationSource{
-				Ref:     subPattern.TargetRevision,
+				Ref:     subPattern.Name,
 				RepoURL: subPattern.TargetRepo,
 				Name:    subPattern.Name,
 			}
