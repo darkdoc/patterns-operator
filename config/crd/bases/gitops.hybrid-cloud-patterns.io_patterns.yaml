@@ -107,6 +107,29 @@ spec:
                     description: (DEPRECATED) Branch, tag or commit in the upstream
                       git repository. Does not support short-sha's. Default to HEAD
                     type: string
+                  subPatterns:
+                    description: Optional. Additional patterns to be included/imported
+                      as additional source
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        targetRepo:
+                          type: string
+                        targetRevision:
+                          type: string
+                        tokenSecret:
+                          description: |-
+                            Optional. K8s secret name where the info for connecting to git can be found. The supported secrets are modeled after the
+                            private repositories in argo (https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)
+                            currently ssh and username+password are supported
+                          type: string
+                        tokenSecretNamespace:
+                          description: Optional. K8s secret namespace where the token
+                            for connecting to git can be found
+                          type: string
+                      type: object
+                    type: array
                   targetRepo:
                     description: Git repo containing the pattern to deploy. Must use
                       https/http or, for ssh, git@server:foo/bar.git

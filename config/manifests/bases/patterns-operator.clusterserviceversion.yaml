@@ -114,7 +114,27 @@ spec:
           private repositories in argo (https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)
           currently ssh and username+password are supported
         displayName: Token Secret
+        path: gitSpec.subPatterns[0].tokenSecret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+      - description: |-
+          Optional. K8s secret name where the info for connecting to git can be found. The supported secrets are modeled after the
+          private repositories in argo (https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)
+          currently ssh and username+password are supported
+        displayName: Token Secret
         path: gitSpec.tokenSecret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+      - description: Optional. Additional patterns to be included/imported as additional
+          source
+        displayName: Sub Patterns
+        path: gitSpec.subPatterns
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+      - description: Optional. K8s secret namespace where the token for connecting
+          to git can be found
+        displayName: Token Secret Namespace
+        path: gitSpec.subPatterns[0].tokenSecretNamespace
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
       - description: Optional. K8s secret namespace where the token for connecting

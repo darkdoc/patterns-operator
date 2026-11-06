@@ -1095,6 +1095,17 @@ func newMultiSourceApplication(p *api.Pattern) *argoapi.Application {
 	}
 	sources = append(sources, *baseSource)
 
+	if p.Spec.GitConfig.SubPatterns != nil {
+		for _, subPattern := range p.Spec.GitConfig.SubPatterns {
+			subPatternSource := &argoapi.ApplicationSource{
+				Ref:     subPattern.TargetRevision,
+				RepoURL: subPattern.TargetRepo,
+				Name:    subPattern.Name,
+			}
+			sources = append(sources, *subPatternSource)
+		}
+	}
+
 	spec := commonApplicationSpec(p, sources)
 	spec.SyncPolicy = commonSyncPolicy(p)
 	return newArgoOperatorApplication(p, spec)
